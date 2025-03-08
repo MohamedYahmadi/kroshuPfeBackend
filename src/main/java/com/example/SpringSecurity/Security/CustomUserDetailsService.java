@@ -1,6 +1,7 @@
 package com.example.SpringSecurity.Security;
 
-import com.example.SpringSecurity.Entities.Student;
+import com.example.SpringSecurity.Entities.Admin;
+import com.example.SpringSecurity.Entities.TeamMember;
 import com.example.SpringSecurity.Entities.User;
 import com.example.SpringSecurity.Respositories.UserRepository;
 import org.slf4j.Logger;
@@ -28,8 +29,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         String role = "";
 
-        if (user instanceof Student) role = "Student";
-        else role = "ADMIN";
+        if (user instanceof Admin) role = "ROLE_Admin";
+        else if (user instanceof TeamMember) {
+            role ="ROLE-TeamMember";
+        }
+        role = "ROLE_Viewer";
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
