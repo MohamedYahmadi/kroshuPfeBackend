@@ -1,6 +1,7 @@
 package com.example.SpringSecurity.Services;
 
 import com.example.SpringSecurity.Dto.LoginDto;
+import com.example.SpringSecurity.Dto.SendMailDto;
 import com.example.SpringSecurity.Dto.SignupDto;
 import com.example.SpringSecurity.Entities.Admin;
 import com.example.SpringSecurity.Entities.TeamMember;
@@ -11,6 +12,7 @@ import com.example.SpringSecurity.Respositories.TeamMemberRepository;
 import com.example.SpringSecurity.Respositories.UserRepository;
 import com.example.SpringSecurity.Respositories.ViewerRepository;
 import com.example.SpringSecurity.Security.JwtService;
+import jakarta.mail.MessagingException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -30,8 +32,9 @@ public class AdminService {
     private final JwtService jwtService;
     private final ViewerRepository viewerRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final EmailService emailService;
 
-    public AdminService(AdminRepository adminRepository, UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository) {
+    public AdminService(AdminRepository adminRepository, UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository, EmailService emailService) {
         this.adminRepository = adminRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -39,6 +42,7 @@ public class AdminService {
         this.jwtService = jwtService;
         this.viewerRepository = viewerRepository;
         this.teamMemberRepository = teamMemberRepository;
+        this.emailService = emailService;
     }
 
 
@@ -68,38 +72,55 @@ public class AdminService {
 
 
     public String createUser(SignupDto signData) {
-        // Prevent creating users with the "Admin" role
-        if ("Admin".equalsIgnoreCase(signData.getRole())) {
-            throw new IllegalStateException("Cannot create a user with the role 'Admin'");
+        try {
+            // Prevent creating users with the "Admin" role
+            if ("Admin".equalsIgnoreCase(signData.getRole())) {
+                throw new IllegalStateException("Cannot create a user with the role 'Admin'");
+            }
+
+            // Check if the email is already in use
+            if (userRepository.findByEmail(signData.getEmail()).isPresent()) {
+                throw new IllegalStateException("Email already used");
+            }
+
+            // Encode the password
+            String encodedPassword = passwordEncoder.encode(signData.getPassword());
+
+            // Save the user in the appropriate table based on their role
+            switch (signData.getRole().toUpperCase()) {
+                case "TEAM_MEMBER":
+                    TeamMember teamMember = new TeamMember();
+                    setCommonUserFields(teamMember, signData, encodedPassword);
+                    teamMemberRepository.save(teamMember);
+                    break;
+
+                case "VIEWER":
+                    Viewer viewer = new Viewer();
+                    setCommonUserFields(viewer, signData, encodedPassword);
+                    viewerRepository.save(viewer);
+                    break;
+
+                default:
+                    throw new IllegalStateException("Invalid role: " + signData.getRole());
+            }
+
+            // Create a SendMailDto object
+            SendMailDto sendMailDto = new SendMailDto();
+            sendMailDto.setEmail(signData.getEmail());
+            sendMailDto.setName(signData.getFirstName());
+            sendMailDto.setPassword(signData.getPassword());
+
+            // Send an email with login details
+            emailService.sendEmail(sendMailDto);
+
+            return "User Account Created Successfully";
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            return "User Account Created, but failed to send email: " + e.getMessage();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "An error occurred: " + e.getMessage();
         }
-
-        // Check if the email is already in use
-        if (userRepository.findByEmail(signData.getEmail()).isPresent()) {
-            throw new IllegalStateException("Email already used");
-        }
-
-        // Encode the password
-        String encodedPassword = passwordEncoder.encode(signData.getPassword());
-
-        // Save the user in the appropriate table based on their role
-        switch (signData.getRole().toUpperCase()) {
-            case "TEAM_MEMBER":
-                TeamMember teamMember = new TeamMember();
-                setCommonUserFields(teamMember, signData, encodedPassword);
-                teamMemberRepository.save(teamMember);
-                break;
-
-            case "VIEWER":
-                Viewer viewer = new Viewer();
-                setCommonUserFields(viewer, signData, encodedPassword);
-                viewerRepository.save(viewer);
-                break;
-
-            default:
-                throw new IllegalStateException("Invalid role: " + signData.getRole());
-        }
-
-        return "User Account Created Successfully";
     }
 
     // Helper method to set common user fields
