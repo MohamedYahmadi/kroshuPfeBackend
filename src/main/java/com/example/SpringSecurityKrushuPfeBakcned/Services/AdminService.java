@@ -21,6 +21,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class AdminService {
     private final AdminRepository adminRepository;
@@ -114,6 +117,12 @@ public class AdminService {
 
         return ResponseEntity.ok("Admin profile updated successfully");
     }
+    public List<User> getAllUsers() {
+        return userRepository.findAll().stream()
+                .filter(user -> !"Admin".equalsIgnoreCase(user.getRole()))
+                .collect(Collectors.toList());
+    }
+
 
     }
 

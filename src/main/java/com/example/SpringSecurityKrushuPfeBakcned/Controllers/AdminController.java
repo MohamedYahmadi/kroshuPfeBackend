@@ -2,10 +2,13 @@ package com.example.SpringSecurityKrushuPfeBakcned.Controllers;
 
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.SignupDto;
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.UpdateAdminProfileDto;
+import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -31,6 +34,10 @@ public class AdminController {
     @PutMapping("/update-profile/{id}")
     public ResponseEntity<String> updateProfile(@PathVariable int id, @RequestBody UpdateAdminProfileDto updateAdminProfileDto) {
         return adminService.updateProfile(id, updateAdminProfileDto);
+    }
+    @GetMapping("/all-users")
+    public List<User>getAllUsers(){
+        return adminService.getAllUsers();
     }
 }
 
