@@ -45,27 +45,6 @@ public class AdminService {
 
 
 
-    public String loginAdmin(LoginDto loginData) {
-        try {
-            Admin admin = adminRepository.findByEmail(loginData.getEmail())
-                    .orElseThrow(() -> new RuntimeException("Admin not found"));
-
-            if (!passwordEncoder.matches(loginData.getPassword(), admin.getPassword())) {
-                throw new BadCredentialsException("Incorrect password");
-            }
-
-            authenticationProvider.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginData.getEmail(), loginData.getPassword())
-            );
-
-            return jwtService.createToken(loginData.getEmail());
-        } catch (Exception e) {
-            System.out.println(e);
-            return "Email or password incorrect";
-        }
-    }
-
-
     public String createUser(SignupDto signData) {
         try {
             if ("Admin".equalsIgnoreCase(signData.getRole())) {

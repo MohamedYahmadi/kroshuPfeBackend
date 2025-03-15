@@ -30,10 +30,10 @@ public class UserController {
        return userService.getProfile(id);
    }
 
-    @PostMapping("login")
-    public String LoginAdmin( @RequestBody LoginDto loginData){
-        return userService.loginUser(loginData);}
-
+   @PostMapping("login")
+public ResponseEntity<String> loginAdmin(@RequestBody LoginDto loginData) {
+    return userService.loginUser(loginData);
+}
 
     @PostMapping("/update-password/{userId}")
     public String updatePassword(@PathVariable int userId, @RequestBody ChangePasswordDto changePasswordData) {
