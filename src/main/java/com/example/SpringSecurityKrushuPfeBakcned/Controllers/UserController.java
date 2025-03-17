@@ -1,9 +1,6 @@
 package com.example.SpringSecurityKrushuPfeBakcned.Controllers;
 
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.LoginDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.ChangePasswordDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.SignupDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.UpdateProfileDto;
+import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +28,7 @@ public class UserController {
    }
 
    @PostMapping("login")
-public ResponseEntity<String> loginAdmin(@RequestBody LoginDto loginData) {
+public ResponseEntity<LoginResponseDto> loginAdmin(@RequestBody LoginDto loginData) {
     return userService.loginUser(loginData);
 }
 

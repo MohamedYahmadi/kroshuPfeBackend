@@ -16,7 +16,7 @@ public class WebConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // Allow all endpoints
                         .allowedOrigins(
-                                "http://localhost:8082" // React Frontend
+                                "http://localhost:8081" // React Frontend
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH") // Allow common HTTP methods
                         .allowedHeaders("*") // Allow all headers

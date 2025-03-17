@@ -100,7 +100,7 @@ public class UserService {
         }
     }
 
-  public ResponseEntity<String> loginUser(LoginDto loginData) {
+  public ResponseEntity<LoginResponseDto> loginUser(LoginDto loginData) {
         try {
             User user = userRepository.findByEmail(loginData.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + loginData.getEmail()));
@@ -115,9 +115,9 @@ public class UserService {
 
             // Generate and return the JWT token
             String token = jwtService.createToken(loginData.getEmail());
-            return ResponseEntity.ok(token);
+            return ResponseEntity.ok(new LoginResponseDto(token, user.getRole(), user.getId()));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Email or password incorrect");
+            throw new BadCredentialsException("Incorrect email or password");
         }
     }
 
