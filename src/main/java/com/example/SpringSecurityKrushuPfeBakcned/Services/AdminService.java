@@ -1,9 +1,6 @@
 package com.example.SpringSecurityKrushuPfeBakcned.Services;
 
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.LoginDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.SendMailDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.SignupDto;
-import com.example.SpringSecurityKrushuPfeBakcned.Dto.UpdateAdminProfileDto;
+import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Admin;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.TeamMember;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
@@ -123,8 +120,34 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
+    public ResponseEntity<String> deleteUser(int userId) {
+        if (userRepository.existsById(userId)) {
+            userRepository.deleteById(userId);
+            return ResponseEntity.ok("User account deleted successfully");
+        } else {
+            return ResponseEntity.status(404).body("User not found");
+        }
+    }
+
+    public ResponseEntity<String> updateUserProfile(int userId, UpdateProfileDto updateProfileDto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        user.setFirstName(updateProfileDto.getFirstName());
+        user.setLastName(updateProfileDto.getLastName());
+        user.setEmail(updateProfileDto.getEmail());
+        user.setDepartment(updateProfileDto.getDepartment());
+        user.setRegistrationNumber(updateProfileDto.getRegistrationNumber());
+        userRepository.save(user);
+
+        return ResponseEntity.ok("User profile updated successfully");
+    }
 
     }
+
+
+
+
 
 
 

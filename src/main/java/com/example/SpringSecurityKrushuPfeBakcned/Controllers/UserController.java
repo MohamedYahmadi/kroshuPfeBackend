@@ -33,13 +33,13 @@ public ResponseEntity<LoginResponseDto> loginAdmin(@RequestBody LoginDto loginDa
 }
 
     @PostMapping("/update-password/{userId}")
-    public String updatePassword(@PathVariable int userId, @RequestBody ChangePasswordDto changePasswordData) {
+    public String updatePassword(@PathVariable int userId, @RequestBody ChangePasswordEmailDto changePasswordData) {
         return userService.changePassword(userId, changePasswordData);
     }
 
     @PutMapping("/update-profile/{id}")
-    public ResponseEntity<String> updateProfile(@PathVariable int id, @RequestBody UpdateProfileDto updateProfileDto) {
-        return userService.updateProfile(id, updateProfileDto);
+    public ResponseEntity<String> updateProfile(@PathVariable int id, @RequestBody UpdateUserProfileDto updateUserProfileDto) {
+        return userService.updateProfile(id, updateUserProfileDto);
     }
 
 

@@ -2,6 +2,7 @@ package com.example.SpringSecurityKrushuPfeBakcned.Controllers;
 
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.SignupDto;
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.UpdateAdminProfileDto;
+import com.example.SpringSecurityKrushuPfeBakcned.Dto.UpdateProfileDto;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,17 @@ public class AdminController {
     @GetMapping("/all-users")
     public List<User>getAllUsers(){
         return adminService.getAllUsers();
+    }
+
+
+    @DeleteMapping("delete-user/{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable int id){
+        return adminService.deleteUser(id);
+    }
+
+    @PutMapping("/update-user-profile/{id}")
+    public ResponseEntity<String> updateUserProfile(@PathVariable int id, @RequestBody UpdateProfileDto updateProfileDto) {
+        return adminService.updateUserProfile(id, updateProfileDto);
     }
 }
 

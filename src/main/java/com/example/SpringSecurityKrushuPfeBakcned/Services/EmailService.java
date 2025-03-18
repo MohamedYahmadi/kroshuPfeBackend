@@ -1,5 +1,6 @@
 package com.example.SpringSecurityKrushuPfeBakcned.Services;
 
+import com.example.SpringSecurityKrushuPfeBakcned.Dto.ChangePasswordEmailDto;
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.SendMailDto;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -41,6 +42,30 @@ public class EmailService {
             e.printStackTrace();
             System.out.println(e.getMessage());
             throw new MessagingException("Failed to send verification email", e);
+        }
+    }
+    public void sendPasswordChangeEmail(ChangePasswordEmailDto passwordChangeMailDto) throws MessagingException {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(passwordChangeMailDto.getEmail());
+            helper.setSubject("Password Change Notification");
+            helper.setFrom("m1ghtym3d@gmail.com");
+
+            Context context = new Context();
+            context.setVariable("name", passwordChangeMailDto.getName());
+            context.setVariable("oldPassword", passwordChangeMailDto.getOldPassword());
+            context.setVariable("newPassword", passwordChangeMailDto.getNewPassword());
+
+            String htmlContent = springTemplateEngine.process("PasswordChange", context);
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+            throw new MessagingException("Failed to send password change email", e);
         }
     }
 }

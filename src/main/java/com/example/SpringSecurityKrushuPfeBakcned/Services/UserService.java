@@ -123,33 +123,52 @@ public class UserService {
 
 
 
-    public String changePassword(int userId, ChangePasswordDto changePasswordData) {
-
+   public String changePassword(int userId, ChangePasswordEmailDto changePasswordData) {
+        // Step 1: Find the user by ID
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
+        // Step 2: Validate the old password
         if (!passwordEncoder.matches(changePasswordData.getOldPassword(), user.getPassword())) {
             throw new BadCredentialsException("Old password is incorrect");
         }
 
+        // Step 3: Validate that the new password and confirm new password match
         if (!changePasswordData.getNewPassword().equals(changePasswordData.getConfirmPassword())) {
             throw new BadCredentialsException("New passwords do not match");
         }
 
+        // Step 4: Encode and save the new password
         String encodedPassword = passwordEncoder.encode(changePasswordData.getNewPassword());
         user.setPassword(encodedPassword);
         userRepository.save(user);
 
-        return "Password reset successfully";
+        // Step 5: Prepare the email notification DTO
+        ChangePasswordEmailDto passwordChangeMailDto = new ChangePasswordEmailDto();
+        passwordChangeMailDto.setEmail(user.getEmail());
+        passwordChangeMailDto.setName(user.getFirstName());
+        passwordChangeMailDto.setOldPassword(changePasswordData.getOldPassword());
+        passwordChangeMailDto.setNewPassword(changePasswordData.getNewPassword());
+
+        // Step 6: Send the email notification
+        try {
+            emailService.sendPasswordChangeEmail(passwordChangeMailDto);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            return "Password changed successfully, but failed to send email: " + e.getMessage();
+        }
+
+        // Step 7: Return success message
+        return "Password changed successfully";
     }
 
 
-    public ResponseEntity<String> updateProfile(int userId, UpdateProfileDto updateProfileDto) {
+    public ResponseEntity<String> updateProfile(int userId, UpdateUserProfileDto updateUserProfileDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-        user.setFirstName(updateProfileDto.getFirstName());
-        user.setLastName(updateProfileDto.getLastName());
+        user.setFirstName(updateUserProfileDto.getFirstName());
+        user.setLastName(updateUserProfileDto.getLastName());
         userRepository.save(user);
 
         return ResponseEntity.ok("Profile updated successfully");
