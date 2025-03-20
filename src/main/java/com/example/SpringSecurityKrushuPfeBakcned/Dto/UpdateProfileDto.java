@@ -6,6 +6,7 @@ public class UpdateProfileDto {
     private String email;
     private String department;
     private String registrationNumber;
+    private String role;
 
     public String getFirstName() {
         return firstName;
@@ -45,6 +46,14 @@ public class UpdateProfileDto {
 
     public void setRegistrationNumber(String registrationNumber) {
         this.registrationNumber = registrationNumber;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }
 

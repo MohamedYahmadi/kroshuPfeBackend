@@ -138,6 +138,7 @@ public class AdminService {
         user.setEmail(updateProfileDto.getEmail());
         user.setDepartment(updateProfileDto.getDepartment());
         user.setRegistrationNumber(updateProfileDto.getRegistrationNumber());
+        user.setRole(updateProfileDto.getRole());
         userRepository.save(user);
 
         return ResponseEntity.ok("User profile updated successfully");

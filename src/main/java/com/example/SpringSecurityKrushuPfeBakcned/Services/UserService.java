@@ -158,7 +158,6 @@ public class UserService {
             return "Password changed successfully, but failed to send email: " + e.getMessage();
         }
 
-        // Step 7: Return success message
         return "Password changed successfully";
     }
 
