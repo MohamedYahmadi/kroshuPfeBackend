@@ -68,4 +68,24 @@ public class EmailService {
             throw new MessagingException("Failed to send password change email", e);
         }
     }
+    public void sendResetEmail(String email, String resetLink) throws MessagingException {
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(email);
+            helper.setSubject("Password Reset Request");
+            helper.setFrom("m1ghtym3d@gmail.com");
+
+            Context context = new Context();
+            context.setVariable("resetLink", resetLink);
+
+            String htmlContent = springTemplateEngine.process("PasswordReset", context);
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+        } catch (Exception e) {
+            throw new MessagingException("Failed to send reset email", e);
+        }
+    }
 }

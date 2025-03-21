@@ -8,6 +8,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Respositories.TeamMemberReposi
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.UserRepository;
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.ViewerRepository;
 import com.example.SpringSecurityKrushuPfeBakcned.Security.JwtService;
+import com.example.SpringSecurityKrushuPfeBakcned.Security.ResetTokenService;
 import jakarta.mail.MessagingException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -27,10 +28,11 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationProvider authenticationProvider;
     private final JwtService jwtService;
+    private final ResetTokenService resetTokenService;
     private final EmailService emailService;
 
 
-    public UserService(UserRepository userRepository, AdminRepository adminRepository, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, EmailService emailService) {
+    public UserService(UserRepository userRepository, AdminRepository adminRepository, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, ResetTokenService resetTokenService, EmailService emailService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.viewerRepository = viewerRepository;
@@ -38,14 +40,18 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
         this.authenticationProvider = authenticationProvider;
         this.jwtService = jwtService;
+        this.resetTokenService = resetTokenService;
 
         this.emailService = emailService;
     }
 
 
+
+
+
     public String signUpAdmin(SignupDto signData) {
         try {
-            // Check if an admin account already exists
+
             Optional<Admin> oldAdmin = adminRepository.findAll().stream()
                     .filter(admin -> "Admin".equalsIgnoreCase(admin.getRole()))
                     .findFirst();
@@ -113,7 +119,6 @@ public class UserService {
                     new UsernamePasswordAuthenticationToken(loginData.getEmail(), loginData.getPassword())
             );
 
-            // Generate and return the JWT token
             String token = jwtService.createToken(loginData.getEmail());
             return ResponseEntity.ok(new LoginResponseDto(token, user.getRole(), user.getId()));
         } catch (Exception e) {
@@ -124,26 +129,21 @@ public class UserService {
 
 
    public String changePassword(int userId, ChangePasswordEmailDto changePasswordData) {
-        // Step 1: Find the user by ID
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-        // Step 2: Validate the old password
         if (!passwordEncoder.matches(changePasswordData.getOldPassword(), user.getPassword())) {
             throw new BadCredentialsException("Old password is incorrect");
         }
 
-        // Step 3: Validate that the new password and confirm new password match
         if (!changePasswordData.getNewPassword().equals(changePasswordData.getConfirmPassword())) {
             throw new BadCredentialsException("New passwords do not match");
         }
 
-        // Step 4: Encode and save the new password
         String encodedPassword = passwordEncoder.encode(changePasswordData.getNewPassword());
         user.setPassword(encodedPassword);
         userRepository.save(user);
 
-        // Step 5: Prepare the email notification DTO
         ChangePasswordEmailDto passwordChangeMailDto = new ChangePasswordEmailDto();
         passwordChangeMailDto.setEmail(user.getEmail());
         passwordChangeMailDto.setName(user.getFirstName());
@@ -172,6 +172,65 @@ public class UserService {
 
         return ResponseEntity.ok("Profile updated successfully");
     }
+
+    public String requestPasswordReset( PasswordResetRequestDto request) {
+        String email = request.getEmail();
+
+        // Check if the user exists
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        // Generate a reset token
+        String resetToken = resetTokenService.generateResetToken(email);
+
+        // Create the reset link
+        String resetLink = "yourapp://reset-password    " +
+                "token=" + resetToken;
+
+        // Send the reset link via email
+        try {
+            emailService.sendResetEmail(email, resetLink);
+            return "Reset link sent to your email";
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send reset email: " + e.getMessage());
+        }
+    }
+
+    // Step 2: Reset the password
+    public String resetPassword( PasswordResetDto request) {
+        String token = request.getToken();
+        String newPassword = request.getNewPassword();
+        String confirmPassword = request.getConfirmPassword();
+
+        // Validate that the new password and confirm password match
+        if (!newPassword.equals(confirmPassword)) {
+            throw new RuntimeException("New password and confirm password do not match");
+        }
+
+        try {
+            // Verify the token
+            String email = resetTokenService.verifyResetToken(token);
+
+            // Find the user by email
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+            // Encode and save the new password
+            String encodedPassword = passwordEncoder.encode(newPassword);
+            user.setPassword(encodedPassword);
+            userRepository.save(user);
+
+            return "Password reset successfully";
+        } catch (RuntimeException e) {
+            // Handle token expiration or invalid token
+            throw new RuntimeException("Invalid or expired token. Please request a new reset link.");
+        } catch (Exception e) {
+            // Handle other exceptions
+            throw new RuntimeException("An error occurred while resetting the password: " + e.getMessage());
+        }
+    }
+    
+
 
 
 

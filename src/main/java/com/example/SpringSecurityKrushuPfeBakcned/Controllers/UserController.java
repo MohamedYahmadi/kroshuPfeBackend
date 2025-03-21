@@ -4,6 +4,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,8 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
+
+
 
     @PostMapping("/signup-admin")
     public String signUpAdmin(@RequestBody SignupDto signData) {
@@ -40,6 +43,20 @@ public ResponseEntity<LoginResponseDto> loginAdmin(@RequestBody LoginDto loginDa
     @PutMapping("/update-profile/{id}")
     public ResponseEntity<String> updateProfile(@PathVariable int id, @RequestBody UpdateUserProfileDto updateUserProfileDto) {
         return userService.updateProfile(id, updateUserProfileDto);
+    }
+    @PostMapping("/request-password-reset")
+    public String requestPasswordReset(@RequestBody PasswordResetRequestDto request) {
+        return userService.requestPasswordReset(request);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetDto request) {
+        try {
+            String result = userService.resetPassword(request);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
 
