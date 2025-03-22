@@ -2,6 +2,8 @@ package com.example.SpringSecurityKrushuPfeBakcned.Entities;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -18,6 +20,9 @@ public class User {
     private String registrationNumber;
     private String department;
 
+    private String resetCode;
+    private LocalDateTime resetCodeExpiry;
+
     public User() {
     }
 
@@ -30,6 +35,24 @@ public class User {
         this.registrationNumber = registrationNumber;
         this.department = department;
     }
+
+
+    public String getResetCode() {
+        return resetCode;
+    }
+
+    public void setResetCode(String resetCode) {
+        this.resetCode = resetCode;
+    }
+
+    public LocalDateTime getResetCodeExpiry() {
+        return resetCodeExpiry;
+    }
+
+    public void setResetCodeExpiry(LocalDateTime resetCodeExpiry) {
+        this.resetCodeExpiry = resetCodeExpiry;
+    }
+
 
     public String getFirstName() {
         return firstName;

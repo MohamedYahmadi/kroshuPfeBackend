@@ -3,7 +3,6 @@ package com.example.SpringSecurityKrushuPfeBakcned.Dto;
 public class PasswordResetRequestDto {
     private String email;
 
-    // Getters and Setters
     public String getEmail() {
         return email;
     }

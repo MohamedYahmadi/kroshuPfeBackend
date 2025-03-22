@@ -8,7 +8,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Respositories.TeamMemberReposi
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.UserRepository;
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.ViewerRepository;
 import com.example.SpringSecurityKrushuPfeBakcned.Security.JwtService;
-import com.example.SpringSecurityKrushuPfeBakcned.Security.ResetTokenService;
+import com.example.SpringSecurityKrushuPfeBakcned.Util.ResetCodeUtil;
 import jakarta.mail.MessagingException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -17,7 +17,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class UserService {
@@ -28,11 +31,12 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationProvider authenticationProvider;
     private final JwtService jwtService;
-    private final ResetTokenService resetTokenService;
+    private final ResetCodeUtil resetCodeUtil;
+
     private final EmailService emailService;
 
 
-    public UserService(UserRepository userRepository, AdminRepository adminRepository, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, ResetTokenService resetTokenService, EmailService emailService) {
+    public UserService(UserRepository userRepository, AdminRepository adminRepository, ViewerRepository viewerRepository, TeamMemberRepository teamMemberRepository, PasswordEncoder passwordEncoder, AuthenticationProvider authenticationProvider, JwtService jwtService, ResetCodeUtil resetCodeUtil, EmailService emailService) {
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
         this.viewerRepository = viewerRepository;
@@ -40,8 +44,7 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
         this.authenticationProvider = authenticationProvider;
         this.jwtService = jwtService;
-        this.resetTokenService = resetTokenService;
-
+        this.resetCodeUtil = resetCodeUtil;
         this.emailService = emailService;
     }
 
@@ -59,10 +62,8 @@ public class UserService {
                 throw new IllegalStateException("An Admin Account Already Exists");
             }
 
-            // Encode the password
             String encodedPassword = passwordEncoder.encode(signData.getPassword());
 
-            // Create the admin entity
             Admin admin = new Admin(
                     signData.getFirstName(),
                     signData.getLastName(),
@@ -73,16 +74,13 @@ public class UserService {
                     signData.getDepartment()
             );
 
-            // Save the admin to the database
             adminRepository.save(admin);
 
-            // Create a SendMailDto object
             SendMailDto sendMailDto = new SendMailDto();
             sendMailDto.setEmail(signData.getEmail());
             sendMailDto.setName(signData.getFirstName());
             sendMailDto.setPassword(signData.getPassword());
 
-            // Send an email with login details
             emailService.sendEmail(sendMailDto);
 
             return "Admin Account Created Successfully";
@@ -150,7 +148,6 @@ public class UserService {
         passwordChangeMailDto.setOldPassword(changePasswordData.getOldPassword());
         passwordChangeMailDto.setNewPassword(changePasswordData.getNewPassword());
 
-        // Step 6: Send the email notification
         try {
             emailService.sendPasswordChangeEmail(passwordChangeMailDto);
         } catch (MessagingException e) {
@@ -173,61 +170,86 @@ public class UserService {
         return ResponseEntity.ok("Profile updated successfully");
     }
 
-    public String requestPasswordReset( PasswordResetRequestDto request) {
+    public String requestPasswordReset(PasswordResetRequestDto request) {
         String email = request.getEmail();
 
         // Check if the user exists
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        // Generate a reset token
-        String resetToken = resetTokenService.generateResetToken(email);
+        // Generate a random 6-digit reset code
+        String resetCode = String.format("%06d", new Random().nextInt(999999));
 
-        // Create the reset link
-        String resetLink = "yourapp://reset-password    " +
-                "token=" + resetToken;
+        // Hash the reset code
+        String hashedResetCode = passwordEncoder.encode(resetCode);
 
-        // Send the reset link via email
+        // Print debug information
+        System.out.println("Raw Reset Code: " + resetCode);
+        System.out.println("Hashed Reset Code: " + hashedResetCode);
+
+        // Set the reset code and expiry time (e.g., 10 minutes from now)
+        user.setResetCode(hashedResetCode);
+        user.setResetCodeExpiry(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+
+        // Send the raw reset code via email
         try {
-            emailService.sendResetEmail(email, resetLink);
-            return "Reset link sent to your email";
+            emailService.sendResetEmail(email, resetCode); // Send the raw reset code
+            return "Reset code sent to your email";
         } catch (Exception e) {
             throw new RuntimeException("Failed to send reset email: " + e.getMessage());
         }
     }
 
-    // Step 2: Reset the password
-    public String resetPassword( PasswordResetDto request) {
-        String token = request.getToken();
+
+    public String resetPassword(PasswordResetDto request) {
+        String resetCode = request.getResetCode();
         String newPassword = request.getNewPassword();
         String confirmPassword = request.getConfirmPassword();
 
-        // Validate that the new password and confirm password match
         if (!newPassword.equals(confirmPassword)) {
             throw new RuntimeException("New password and confirm password do not match");
         }
 
-        try {
-            // Verify the token
-            String email = resetTokenService.verifyResetToken(token);
+        List<User> usersWithResetCode = userRepository.findByResetCodeIsNotNull();
 
-            // Find the user by email
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        User user = usersWithResetCode.stream()
+                .filter(u -> {
+                    if (u.getResetCode() == null || u.getResetCodeExpiry() == null) {
+                        System.out.println("No reset code or expiry time found for user: " + u.getEmail());
+                        return false;
+                    }
 
-            // Encode and save the new password
-            String encodedPassword = passwordEncoder.encode(newPassword);
-            user.setPassword(encodedPassword);
-            userRepository.save(user);
+                    if (LocalDateTime.now().isAfter(u.getResetCodeExpiry())) {
+                        System.out.println("Reset code has expired for user: " + u.getEmail());
+                        return false;
+                    }
 
-            return "Password reset successfully";
-        } catch (RuntimeException e) {
-            // Handle token expiration or invalid token
-            throw new RuntimeException("Invalid or expired token. Please request a new reset link.");
-        } catch (Exception e) {
-            // Handle other exceptions
-            throw new RuntimeException("An error occurred while resetting the password: " + e.getMessage());
-        }
+                    boolean isMatch = passwordEncoder.matches(resetCode, u.getResetCode());
+                    System.out.println("User Email: " + u.getEmail());
+                    System.out.println("Stored Reset Code: " + u.getResetCode());
+                    System.out.println("Provided Reset Code: " + resetCode);
+                    System.out.println("Reset Code Match: " + isMatch);
+                    return isMatch;
+                })
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Invalid or expired reset code"));
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+
+        user.setResetCode(null);
+        user.setResetCodeExpiry(null);
+        userRepository.save(user);
+
+        return "Password reset successfully";
+    }
+
+
+
+
+
+
     }
     
 
@@ -235,5 +257,5 @@ public class UserService {
 
 
 
-}
+
 

@@ -1,17 +1,16 @@
 package com.example.SpringSecurityKrushuPfeBakcned.Dto;
 
 public class PasswordResetDto {
-    private String token;
+    private String resetCode;
     private String newPassword;
     private String confirmPassword;
 
-    // Getters and Setters
-    public String getToken() {
-        return token;
+    public String getResetCode() {
+        return resetCode;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setResetCode(String resetCode) {
+        this.resetCode = resetCode;
     }
 
     public String getNewPassword() {

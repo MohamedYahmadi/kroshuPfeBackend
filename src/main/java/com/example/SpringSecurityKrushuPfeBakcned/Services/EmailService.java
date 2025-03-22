@@ -68,7 +68,7 @@ public class EmailService {
             throw new MessagingException("Failed to send password change email", e);
         }
     }
-    public void sendResetEmail(String email, String resetLink) throws MessagingException {
+    public void sendResetEmail(String email, String resetCode) throws MessagingException {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
@@ -78,7 +78,7 @@ public class EmailService {
             helper.setFrom("m1ghtym3d@gmail.com");
 
             Context context = new Context();
-            context.setVariable("resetLink", resetLink);
+            context.setVariable("resetCode", resetCode);
 
             String htmlContent = springTemplateEngine.process("PasswordReset", context);
             helper.setText(htmlContent, true);
