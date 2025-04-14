@@ -67,9 +67,11 @@ public class AdminController {
         return indicatorService.createIndicator(indicatorDto);
     }
 
-    @PutMapping("/set-indicator-value")
-    public ResponseEntity<String> setIndicatorValue(@RequestBody SetIndicatorValue indicatorValue) {
-        return indicatorService.setIndicatorValue(indicatorValue);
+    @PostMapping("/set-value")
+    public ResponseEntity<IndicatorValueResponseDTO> setIndicatorValue(
+            @RequestBody SetIndicatorValueDTO requestDTO
+    ) {
+        return indicatorService.setIndicatorValue(requestDTO);
     }
 
     @GetMapping("/indicators/{departmentId}")
@@ -84,6 +86,30 @@ public class AdminController {
     @GetMapping("/indicators-by-department")
     public List<DepartmentIndicatorsDTO> getIndicatorsByDepartment() {
         return indicatorService.categorizeIndicatorsByDepartment();
+    }
+    @GetMapping("/all-departments-names")
+    public List<String> getDepartmentNames() {
+        return departmentService.getAllDepartmentNames();
+    }
+    @GetMapping("/all-departments")
+    public List<Department> getAllDepartments() {
+        return departmentService.getAllDepartments();
+    }
+
+
+    @DeleteMapping("/delete-department/{id}")
+    public ResponseEntity<String> deleteDepartment(@PathVariable int id) {
+        return departmentService.deleteDepartment(id);
+    }
+    @PutMapping("/rename-department/{departmentId}")
+    public ResponseEntity<String> renameDepartment(@PathVariable int departmentId, @RequestBody RenameDepartmentDto renameDepartmentDto) {
+        return departmentService.renameDepartment(departmentId, renameDepartmentDto);
+    }
+
+
+    @DeleteMapping("/delete-indicator/{id}")
+    public ResponseEntity<String> deleteIndicator(@PathVariable int id) {
+        return indicatorService.deleteIndicator(id);
     }
 }
 

@@ -7,10 +7,11 @@ import com.example.SpringSecurityKrushuPfeBakcned.Respositories.DepartmentReposi
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.IndicatorRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import com.example.SpringSecurityKrushuPfeBakcned.Util.DateUtil;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,11 +26,13 @@ public class IndicatorService {
     }
 
     public ResponseEntity<String> createIndicator(CreateIndicatorDto indicatorDto) {
-        Department department = departmentRepository.findById(indicatorDto.getDepartmentId());
+        Optional<Department> optionalDepartment = departmentRepository.findByName(indicatorDto.getDepartmentName());
 
-        if (department == null) {
+        if (!optionalDepartment.isPresent()) {
             return ResponseEntity.badRequest().body("Department not found");
         }
+
+        Department department = optionalDepartment.get();
 
         Indicator newIndicator = Indicator.builder()
                 .name(indicatorDto.getName())
@@ -42,29 +45,74 @@ public class IndicatorService {
         return ResponseEntity.ok("Indicator created successfully");
     }
 
-    public ResponseEntity<String> setIndicatorValue(SetIndicatorValue indicatorValue) {
-        Indicator indicator = indicatorRepository.findById(indicatorValue.getIndicatorId()).orElse(null);
+    public ResponseEntity<IndicatorValueResponseDTO> setIndicatorValue(SetIndicatorValueDTO requestDTO) {
+        // 1. Find department by name
+        Department department = departmentRepository.findByName(requestDTO.getDepartmentName())
+                .orElse(null);
+
+        if (department == null) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Department not found")
+                            .build()
+            );
+        }
+
+        // 2. Find indicator by name within the department
+        Indicator indicator = indicatorRepository.findByNameAndDepartment(
+                requestDTO.getIndicatorName(),
+                department
+        ).orElse(null);
 
         if (indicator == null) {
-            return ResponseEntity.badRequest().body("Indicator not found");
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Indicator not found in specified department")
+                            .build()
+            );
         }
 
         Date currentDate = new Date();
 
-        if (indicator.getDay() != null && indicator.getDay().equals(currentDate)) {
-            return ResponseEntity.badRequest().body("Value for the current date already set");
+        // 3. Check for existing value
+        boolean exists = indicator.getDailyValues().stream()
+                .anyMatch(dv -> DateUtil.isSameDay(dv.getDay(), currentDate));
+
+        if (exists) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Value for today already exists")
+                            .build()
+            );
         }
 
-        indicator.setDay(currentDate);
-        indicator.setDayValue(indicatorValue.getValue());
+        // 4. Add and save new value
+        indicator.addDailyValue(currentDate, requestDTO.getValue());
         indicatorRepository.save(indicator);
 
-        return ResponseEntity.ok("Indicator value set successfully");
+        return ResponseEntity.ok(
+                IndicatorValueResponseDTO.builder()
+                        .success(true)
+                        .message("Value saved successfully")
+                        .day(currentDate)
+                        .value(requestDTO.getValue())
+                        .build()
+        );
     }
+
+
+
 
     public List<Indicator> getIndicatorsByDepartmentId(int departmentId) {
         return indicatorRepository.findByDepartmentId(departmentId);
     }
+
+
+
+
     public ResponseEntity<String> updateTargetPerWeek(UpdateTargetPerWeekDto updateTargetPerWeekData) {
         Indicator indicator = indicatorRepository.findById(updateTargetPerWeekData.getIndicatorId()).orElse(null);
 
@@ -77,23 +125,64 @@ public class IndicatorService {
 
         return ResponseEntity.ok("Target per week updated successfully");
     }
+
+
     public List<DepartmentIndicatorsDTO> categorizeIndicatorsByDepartment() {
-        return indicatorRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Indicator::getDepartment))
-                .entrySet().stream()
-                .map(entry -> new DepartmentIndicatorsDTO(
-                        entry.getKey().getName(),
-                        entry.getValue().stream()
-                                .map(ind -> new IndicatorDto(
-                                        ind.getId(),
-                                        ind.getName(),
-                                        ind.getTargetPerWeek(),
-                                        ind.getDay().toString(),
-                                        ind.getDayValue()
-                                ))
-                                .collect(Collectors.toList())
-                ))
+        // 1. Fetch departments with indicators
+        List<Department> allDepartments = departmentRepository.findAllWithIndicators();
+
+        // 2. Collect all indicator IDs for batch loading
+        List<Integer> indicatorIds = allDepartments.stream()
+                .flatMap(d -> d.getIndicators().stream())
+                .map(Indicator::getId)
                 .collect(Collectors.toList());
+
+        // 3. Batch fetch daily values for all indicators
+        Map<Integer, Indicator> indicatorsWithValues = indicatorRepository
+                .findIndicatorsWithDailyValues(indicatorIds)
+                .stream()
+                .collect(Collectors.toMap(Indicator::getId, Function.identity()));
+
+        // 4. Build the response
+        return allDepartments.stream()
+                .map(department -> {
+                    List<IndicatorWithValuesDto> indicatorDtos = department.getIndicators().stream()
+                            .map(indicator -> {
+                                Indicator fullIndicator = indicatorsWithValues.get(indicator.getId());
+                                List<DailyValueDto> dailyValues = fullIndicator.getDailyValues().stream()
+                                        .map(dv -> new DailyValueDto(
+                                                dv.getDay().toString(),
+                                                dv.getValue()
+                                        ))
+                                        .collect(Collectors.toList());
+
+                                return new IndicatorWithValuesDto(
+                                        indicator.getId(),
+                                        indicator.getName(),
+                                        indicator.getTargetPerWeek(),
+                                        dailyValues
+                                );
+                            })
+                            .collect(Collectors.toList());
+
+                    return new DepartmentIndicatorsDTO(
+                            department.getId(),
+                            department.getName(),
+                            indicatorDtos
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
+    public ResponseEntity<String> deleteIndicator(int indicatorId) {
+        if (indicatorRepository.existsById(indicatorId)) {
+            indicatorRepository.deleteById(indicatorId);
+            return ResponseEntity.ok("Indicator deleted successfully");
+        } else {
+            return ResponseEntity.status(404).body("Indicator not found");
+        }
     }
 
 }
