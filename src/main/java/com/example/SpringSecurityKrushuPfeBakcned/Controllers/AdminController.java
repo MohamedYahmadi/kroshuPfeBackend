@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 
 @RestController
@@ -57,7 +56,7 @@ public class AdminController {
     public ResponseEntity<String> updateUserProfile(@PathVariable int id, @RequestBody UpdateProfileDto updateProfileDto) {
         return adminService.updateUserProfile(id, updateProfileDto);
     }
-    //Srpint 2 methodes
+    //Sprint 2 methods
     @PostMapping("/create-department")
     public String createDepartment(@RequestBody CreateDepartement departmentData) {
         return departmentService.CreateDepartment(departmentData);
@@ -79,9 +78,15 @@ public class AdminController {
         return indicatorService.getIndicatorsByDepartmentId(departmentId);
     }
 
-    @PutMapping("/update-target")
-    public ResponseEntity<String> updateTargetPerWeek(@RequestBody UpdateTargetPerWeekDto updateData) {
-        return indicatorService.updateTargetPerWeek(updateData);
+   @GetMapping("/indicators-by-department-name/{departmentName}")
+    public List<IndicatorWithoutValuesDTO> getIndicatorsByDepartmentName(@PathVariable String departmentName) {
+        return indicatorService.getIndicatorsByDepartmentName(departmentName);
+    }
+
+   @PutMapping("/update-indicator/{id}")
+    public ResponseEntity<String> updateIndicator(@PathVariable int id, @RequestBody UpdateTargetPerWeekDto updateIndicatorData) {
+        updateIndicatorData.setIndicatorId(id);
+        return indicatorService.updateIndicator(updateIndicatorData);
     }
     @GetMapping("/indicators-by-department")
     public List<DepartmentIndicatorsDTO> getIndicatorsByDepartment() {

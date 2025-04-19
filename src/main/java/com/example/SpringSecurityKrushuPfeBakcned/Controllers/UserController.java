@@ -2,6 +2,7 @@ package com.example.SpringSecurityKrushuPfeBakcned.Controllers;
 
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
+import com.example.SpringSecurityKrushuPfeBakcned.Services.IndicatorService;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,10 +13,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/user")
 public class UserController {
     private final UserService userService;
+    private final IndicatorService indicatorService;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, IndicatorService indicatorService) {
         this.userService = userService;
+        this.indicatorService = indicatorService;
     }
 
 
@@ -57,6 +60,13 @@ public ResponseEntity<LoginResponseDto> loginAdmin(@RequestBody LoginDto loginDa
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+    }
+
+    @PostMapping("/set-team-member-indicator-value/{userId}")
+    public ResponseEntity<IndicatorValueResponseDTO> setTeamMemberIndicatorValue(
+            @RequestBody TeamMemberSetIndicatorValueDTO requestDTO,
+            @PathVariable int userId) {
+        return indicatorService.setTeamMemberIndicatorValue(requestDTO, userId);
     }
 
 

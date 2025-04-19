@@ -118,7 +118,7 @@ public class UserService {
             );
 
             String token = jwtService.createToken(loginData.getEmail());
-            return ResponseEntity.ok(new LoginResponseDto(token, user.getRole(), user.getId()));
+            return ResponseEntity.ok(new LoginResponseDto(token, user.getRole(), user.getId(),user.getDepartment()));
         } catch (Exception e) {
             throw new BadCredentialsException("Incorrect email or password");
         }
