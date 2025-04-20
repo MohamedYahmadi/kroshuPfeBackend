@@ -173,28 +173,22 @@ public class UserService {
     public String requestPasswordReset(PasswordResetRequestDto request) {
         String email = request.getEmail();
 
-        // Check if the user exists
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        // Generate a random 6-digit reset code
         String resetCode = String.format("%06d", new Random().nextInt(999999));
 
-        // Hash the reset code
         String hashedResetCode = passwordEncoder.encode(resetCode);
 
-        // Print debug information
         System.out.println("Raw Reset Code: " + resetCode);
         System.out.println("Hashed Reset Code: " + hashedResetCode);
 
-        // Set the reset code and expiry time (e.g., 10 minutes from now)
         user.setResetCode(hashedResetCode);
         user.setResetCodeExpiry(LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
 
-        // Send the raw reset code via email
         try {
-            emailService.sendResetEmail(email, resetCode); // Send the raw reset code
+            emailService.sendResetEmail(email, resetCode);
             return "Reset code sent to your email";
         } catch (Exception e) {
             throw new RuntimeException("Failed to send reset email: " + e.getMessage());

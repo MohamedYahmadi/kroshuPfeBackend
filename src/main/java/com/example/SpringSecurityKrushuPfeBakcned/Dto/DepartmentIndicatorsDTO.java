@@ -7,12 +7,12 @@ import java.util.List;
 @Getter
 @Setter
 public class DepartmentIndicatorsDTO {
-    private int departmentId;  // New field
+    private int departmentId;
     private String departmentName;
     private List<IndicatorWithValuesDto> indicators;
 
     public DepartmentIndicatorsDTO(String departmentName, List<IndicatorWithValuesDto> indicators) {
-        this(0, departmentName, indicators); // Call new constructor with null ID
+        this(0, departmentName, indicators);
     }
 
     public DepartmentIndicatorsDTO(int departmentId, String departmentName, List<IndicatorWithValuesDto> indicators) {

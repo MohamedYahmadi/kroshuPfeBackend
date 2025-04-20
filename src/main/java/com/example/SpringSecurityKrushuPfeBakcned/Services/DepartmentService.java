@@ -46,9 +46,7 @@ public class DepartmentService {
     @Transactional
     public ResponseEntity<String> deleteDepartment(int departmentId) {
         if (departmentRepository.existsById(departmentId)) {
-            // Delete related indicators first
             indicatorRepository.deleteByDepartmentId(departmentId);
-            // Then delete the department
             departmentRepository.deleteById(departmentId);
             return ResponseEntity.ok("Department and related indicators deleted successfully");
         } else {

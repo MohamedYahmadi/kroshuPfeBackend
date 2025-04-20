@@ -14,9 +14,11 @@ import java.util.Optional;
 public interface IndicatorRepository extends JpaRepository<Indicator, Integer> {
     void deleteByDepartmentId(int departmentId);
     List<Indicator> findByDepartmentId(int departmentId);
-    @Query("SELECT i FROM Indicator i LEFT JOIN FETCH i.dailyValues WHERE i.id IN :ids")
-    List<Indicator> findIndicatorsWithDailyValues(@Param("ids") List<Integer> indicatorIds);
+
+    @Query("SELECT i FROM Indicator i LEFT JOIN FETCH i.dailyValues dv WHERE i.id IN :indicatorIds")
+    List<Indicator> findIndicatorsWithDailyValues(@Param("indicatorIds") List<Integer> indicatorIds);
     Optional<Indicator> findByNameAndDepartment(String name, Department department);
+
 
 
 }

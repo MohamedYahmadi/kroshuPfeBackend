@@ -7,6 +7,6 @@ package com.example.SpringSecurityKrushuPfeBakcned.Dto;
     @Getter
     public class UpdateTargetPerWeekDto {
         private int indicatorId;
-        private String newName; // New field for the indicator name
-        private String newTargetPerWeek; // Changed to Integer to allow null values
+        private String newName;
+        private String newTargetPerWeek;
     }

@@ -1,9 +1,9 @@
 package com.example.SpringSecurityKrushuPfeBakcned.Services;
 
 import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
+import com.example.SpringSecurityKrushuPfeBakcned.Entities.DailyValue;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Department;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Indicator;
-import com.example.SpringSecurityKrushuPfeBakcned.Entities.TeamMember;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.DepartmentRepository;
 import com.example.SpringSecurityKrushuPfeBakcned.Respositories.IndicatorRepository;
@@ -12,10 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.example.SpringSecurityKrushuPfeBakcned.Util.DateUtil;
-import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,7 +35,7 @@ public class IndicatorService {
     public ResponseEntity<String> createIndicator(CreateIndicatorDto indicatorDto) {
         Optional<Department> optionalDepartment = departmentRepository.findByName(indicatorDto.getDepartmentName());
 
-        if (!optionalDepartment.isPresent()) {
+        if (optionalDepartment.isEmpty()) {
             return ResponseEntity.badRequest().body("Department not found");
         }
 
@@ -58,7 +57,6 @@ public class IndicatorService {
 
 
     public ResponseEntity<IndicatorValueResponseDTO> setIndicatorValue(SetIndicatorValueDTO requestDTO) {
-        // 1. Find department by name
         Department department = departmentRepository.findByName(requestDTO.getDepartmentName())
                 .orElse(null);
 
@@ -99,6 +97,28 @@ public class IndicatorService {
             );
         }
 
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.add(Calendar.WEEK_OF_YEAR, -5);
+        Date fiveWeeksAgo = calendar.getTime();
+
+        System.out.println("Current date: " + currentDate);
+        System.out.println("Five weeks ago: " + fiveWeeksAgo);
+
+        List<DailyValue> valuesToRemove = new ArrayList<>();
+        for (DailyValue dv : indicator.getDailyValues()) {
+            System.out.println("Checking value from: " + dv.getDay() +
+                    " - is before? " + dv.getDay().before(fiveWeeksAgo));
+            if (dv.getDay().before(fiveWeeksAgo)) {
+                valuesToRemove.add(dv);
+            }
+        }
+
+        if (!valuesToRemove.isEmpty()) {
+            System.out.println("Removing " + valuesToRemove.size() + " old values");
+            indicator.getDailyValues().removeAll(valuesToRemove);
+        }
+
         indicator.addDailyValue(currentDate, requestDTO.getValue());
         indicatorRepository.save(indicator);
 
@@ -136,22 +156,19 @@ public class IndicatorService {
 
 
     public ResponseEntity<String> updateIndicator(UpdateTargetPerWeekDto updateIndicatorData) {
-        // Find the indicator
         Indicator indicator = indicatorRepository.findById(updateIndicatorData.getIndicatorId())
                 .orElse(null);
 
         if (indicator == null) {
-            return ResponseEntity.notFound().build(); // Changed from badRequest() to notFound()
+            return ResponseEntity.notFound().build();
         }
 
-        // Update the name if provided
         if (updateIndicatorData.getNewName() != null && !updateIndicatorData.getNewName().trim().isEmpty()) {
-            indicator.setName(updateIndicatorData.getNewName().trim()); // Added trim()
+            indicator.setName(updateIndicatorData.getNewName().trim());
         }
 
-        // Update the target per week if provided
         if (updateIndicatorData.getNewTargetPerWeek() != null) {
-            indicator.setTargetPerWeek(updateIndicatorData.getNewTargetPerWeek().trim()); // Added trim()
+            indicator.setTargetPerWeek(updateIndicatorData.getNewTargetPerWeek().trim());
         }
 
         indicatorRepository.save(indicator);
@@ -166,10 +183,20 @@ public class IndicatorService {
     public List<DepartmentIndicatorsDTO> categorizeIndicatorsByDepartment() {
         List<Department> allDepartments = departmentRepository.findAllWithIndicators();
 
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        Date weekStart = calendar.getTime();
+
+
+        calendar.add(Calendar.DAY_OF_WEEK, 6);
+        Date weekEnd = calendar.getTime();
+
         List<Integer> indicatorIds = allDepartments.stream()
                 .flatMap(d -> d.getIndicators().stream())
                 .map(Indicator::getId)
                 .collect(Collectors.toList());
+
         Map<Integer, Indicator> indicatorsWithValues = indicatorRepository
                 .findIndicatorsWithDailyValues(indicatorIds)
                 .stream()
@@ -180,7 +207,9 @@ public class IndicatorService {
                     List<IndicatorWithValuesDto> indicatorDtos = department.getIndicators().stream()
                             .map(indicator -> {
                                 Indicator fullIndicator = indicatorsWithValues.get(indicator.getId());
+
                                 List<DailyValueDto> dailyValues = fullIndicator.getDailyValues().stream()
+                                        .filter(dv -> !dv.getDay().before(weekStart) && !dv.getDay().after(weekEnd))
                                         .map(dv -> new DailyValueDto(
                                                 dv.getDay().toString(),
                                                 dv.getValue()
@@ -287,6 +316,18 @@ public class IndicatorService {
             );
         }
 
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentDate);
+        calendar.add(Calendar.WEEK_OF_YEAR, -5);
+        Date fiveWeeksAgo = calendar.getTime();
+
+        Iterator<DailyValue> iterator = indicator.getDailyValues().iterator();
+        while (iterator.hasNext()) {
+            DailyValue dv = iterator.next();
+            if (dv.getDay().before(fiveWeeksAgo)) {
+                iterator.remove();
+            }
+        }
 
         indicator.addDailyValue(currentDate, requestDTO.getValue());
         indicatorRepository.save(indicator);
@@ -300,5 +341,111 @@ public class IndicatorService {
                         .build()
         );
     }
+
+
+
+
+
+    public List<DepartmentHistoryDTO> getWeeklyHistory() {
+        List<Department> departments = departmentRepository.findAllWithIndicators();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        Date currentWeekStart = calendar.getTime();
+
+        List<Integer> indicatorIds = departments.stream()
+                .flatMap(d -> d.getIndicators().stream())
+                .map(Indicator::getId)
+                .collect(Collectors.toList());
+
+        Map<Integer, Indicator> indicatorsMap = indicatorRepository
+                .findIndicatorsWithDailyValues(indicatorIds)
+                .stream()
+                .collect(Collectors.toMap(Indicator::getId, Function.identity()));
+
+        return departments.stream().map(department -> {
+            List<IndicatorHistoryDTO> indicatorHistories = department.getIndicators().stream()
+                    .map(indicator -> {
+                        Indicator fullIndicator = indicatorsMap.get(indicator.getId());
+                        List<WeeklyDataDTO> weeklyData = new ArrayList<>();
+
+                        Calendar weekCalendar = Calendar.getInstance();
+                        weekCalendar.setTime(currentWeekStart);
+
+                        for (int weekNum = 0; weekNum < 5; weekNum++) {
+                            Date weekStart = weekCalendar.getTime();
+
+                            Calendar endCalendar = (Calendar) weekCalendar.clone();
+                            endCalendar.add(Calendar.DAY_OF_WEEK, 6);
+                            Date weekEnd = endCalendar.getTime();
+
+                            String weekLabel = getWeekLabel(weekNum);
+                            String dateRange = formatDateRange(weekStart, weekEnd);
+
+                            Map<String, String> dailyValues = Arrays.stream(new String[]{"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"})
+                                    .collect(Collectors.toMap(
+                                            day -> day,
+                                            day -> "-"
+                                    ));
+
+                            fullIndicator.getDailyValues().stream()
+                                    .filter(dv -> !dv.getDay().before(weekStart) &&
+                                            !dv.getDay().after(weekEnd))
+                                    .forEach(dv -> {
+                                        String dayName = new SimpleDateFormat("EEEE").format(dv.getDay());
+                                        dailyValues.put(dayName, dv.getValue());
+                                    });
+
+                            weeklyData.add(WeeklyDataDTO.builder()
+                                    .weekLabel(weekLabel)
+                                    .dateRange(dateRange)
+                                    .dailyValues(dailyValues)
+                                    .build());
+
+                            weekCalendar.add(Calendar.WEEK_OF_YEAR, -1);
+                        }
+
+                        return IndicatorHistoryDTO.builder()
+                                .id(indicator.getId())
+                                .name(indicator.getName())
+                                .target(indicator.getTargetPerWeek())
+                                .weeklyData(weeklyData)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            return DepartmentHistoryDTO.builder()
+                    .id(department.getId())
+                    .name(department.getName())
+                    .indicators(indicatorHistories)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    private String getWeekLabel(int weekNum) {
+        switch(weekNum) {
+            case 0: return "Current Week";
+            case 1: return "Last Week";
+            case 2: return "2 Weeks Ago";
+            case 3: return "3 Weeks Ago";
+            case 4: return "4 Weeks Ago";
+            default: return "Week " + weekNum;
+        }
+    }
+
+    private String formatDateRange(Date start, Date end) {
+        SimpleDateFormat monthFormat = new SimpleDateFormat("MMM");
+        SimpleDateFormat dayFormat = new SimpleDateFormat("d");
+        SimpleDateFormat yearFormat = new SimpleDateFormat(", yyyy");
+
+        if (monthFormat.format(start).equals(monthFormat.format(end))) {
+            return monthFormat.format(start) + " " + dayFormat.format(start) + "-" +
+                    dayFormat.format(end) + yearFormat.format(end);
+        }
+        return monthFormat.format(start) + " " + dayFormat.format(start) + "-" +
+                monthFormat.format(end) + " " + dayFormat.format(end) + yearFormat.format(end);
+    }
+
+
 
 }

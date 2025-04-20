@@ -116,6 +116,14 @@ public class AdminController {
     public ResponseEntity<String> deleteIndicator(@PathVariable int id) {
         return indicatorService.deleteIndicator(id);
     }
+
+    @GetMapping("/weekly-history")
+    public List<DepartmentHistoryDTO> getWeeklyHistory() {
+        return indicatorService.getWeeklyHistory();
+    }
+
+
 }
+
 
 

@@ -7,6 +7,6 @@ import lombok.Setter;
 @Getter
 
 public class UserIndicatorValueDTO {
-    private String indicatorName;  // Only needs these two fields
+    private String indicatorName;
     private double value;
 }
