@@ -7,6 +7,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.AdminService;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.DepartmentService;
 import com.example.SpringSecurityKrushuPfeBakcned.Services.IndicatorService;
+import com.example.SpringSecurityKrushuPfeBakcned.Services.PrintService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +22,13 @@ public class AdminController {
     private final AdminService adminService;
     private final DepartmentService departmentService;
     private final IndicatorService indicatorService;
-
+    private final PrintService printService;
     @Autowired
-    public AdminController(AdminService adminService, DepartmentService departmentService, IndicatorService indicatorService) {
+    public AdminController(AdminService adminService, DepartmentService departmentService, IndicatorService indicatorService, PrintService printService) {
         this.adminService = adminService;
         this.departmentService = departmentService;
         this.indicatorService = indicatorService;
+        this.printService = printService;
     }
 
 
@@ -121,6 +123,24 @@ public class AdminController {
     public List<DepartmentHistoryDTO> getWeeklyHistory() {
         return indicatorService.getWeeklyHistory();
     }
+
+    @GetMapping("/print-department/{departmentId}")
+    public ResponseEntity<DepartmentPrintDTO> getDepartmentForPrint(@PathVariable Long departmentId) {
+        DepartmentPrintDTO response = printService.getDepartmentPrintData(departmentId);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PutMapping("/update-indicator-value/{userId}")
+    public ResponseEntity<IndicatorValueResponseDTO> adminUpdateIndicatorValue(
+            @RequestBody AdminUpdateIndicatorValueDTO updateRequest,
+            @PathVariable int userId) {
+        return indicatorService.adminUpdateIndicatorValue(updateRequest, userId);
+    }
+
+
+
+
 
 
 }

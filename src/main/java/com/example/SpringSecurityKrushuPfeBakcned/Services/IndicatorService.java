@@ -15,6 +15,10 @@ import com.example.SpringSecurityKrushuPfeBakcned.Util.DateUtil;
 
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -183,13 +187,19 @@ public class IndicatorService {
     public List<DepartmentIndicatorsDTO> categorizeIndicatorsByDepartment() {
         List<Department> allDepartments = departmentRepository.findAllWithIndicators();
 
-
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         Date weekStart = calendar.getTime();
 
-
         calendar.add(Calendar.DAY_OF_WEEK, 6);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
         Date weekEnd = calendar.getTime();
 
         List<Integer> indicatorIds = allDepartments.stream()
@@ -209,7 +219,18 @@ public class IndicatorService {
                                 Indicator fullIndicator = indicatorsWithValues.get(indicator.getId());
 
                                 List<DailyValueDto> dailyValues = fullIndicator.getDailyValues().stream()
-                                        .filter(dv -> !dv.getDay().before(weekStart) && !dv.getDay().after(weekEnd))
+                                        .filter(dv -> {
+                                            // Reset time components for comparison
+                                            Calendar dvCal = Calendar.getInstance();
+                                            dvCal.setTime(dv.getDay());
+                                            dvCal.set(Calendar.HOUR_OF_DAY, 0);
+                                            dvCal.set(Calendar.MINUTE, 0);
+                                            dvCal.set(Calendar.SECOND, 0);
+                                            dvCal.set(Calendar.MILLISECOND, 0);
+                                            Date normalizedDay = dvCal.getTime();
+
+                                            return !normalizedDay.before(weekStart) && !normalizedDay.after(weekEnd);
+                                        })
                                         .map(dv -> new DailyValueDto(
                                                 dv.getDay().toString(),
                                                 dv.getValue()
@@ -349,9 +370,28 @@ public class IndicatorService {
     public List<DepartmentHistoryDTO> getWeeklyHistory() {
         List<Department> departments = departmentRepository.findAllWithIndicators();
 
+        Calendar todayCal = Calendar.getInstance();
+        todayCal.set(Calendar.HOUR_OF_DAY, 0);
+        todayCal.set(Calendar.MINUTE, 0);
+        todayCal.set(Calendar.SECOND, 0);
+        todayCal.set(Calendar.MILLISECOND, 0);
+        Date today = todayCal.getTime();
+
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         Date currentWeekStart = calendar.getTime();
+
+        Calendar sundayCal = (Calendar) calendar.clone();
+        sundayCal.add(Calendar.DAY_OF_WEEK, 6);
+        sundayCal.set(Calendar.HOUR_OF_DAY, 23);
+        sundayCal.set(Calendar.MINUTE, 59);
+        sundayCal.set(Calendar.SECOND, 59);
+        sundayCal.set(Calendar.MILLISECOND, 999);
+        Date currentWeekEnd = sundayCal.getTime();
 
         List<Integer> indicatorIds = departments.stream()
                 .flatMap(d -> d.getIndicators().stream())
@@ -377,6 +417,10 @@ public class IndicatorService {
 
                             Calendar endCalendar = (Calendar) weekCalendar.clone();
                             endCalendar.add(Calendar.DAY_OF_WEEK, 6);
+                            endCalendar.set(Calendar.HOUR_OF_DAY, 23);
+                            endCalendar.set(Calendar.MINUTE, 59);
+                            endCalendar.set(Calendar.SECOND, 59);
+                            endCalendar.set(Calendar.MILLISECOND, 999);
                             Date weekEnd = endCalendar.getTime();
 
                             String weekLabel = getWeekLabel(weekNum);
@@ -389,12 +433,41 @@ public class IndicatorService {
                                     ));
 
                             fullIndicator.getDailyValues().stream()
-                                    .filter(dv -> !dv.getDay().before(weekStart) &&
-                                            !dv.getDay().after(weekEnd))
+                                    .filter(dv -> {
+                                        Calendar dvCal = Calendar.getInstance();
+                                        dvCal.setTime(dv.getDay());
+                                        dvCal.set(Calendar.HOUR_OF_DAY, 0);
+                                        dvCal.set(Calendar.MINUTE, 0);
+                                        dvCal.set(Calendar.SECOND, 0);
+                                        dvCal.set(Calendar.MILLISECOND, 0);
+                                        Date normalizedDvDate = dvCal.getTime();
+
+                                        return !normalizedDvDate.before(weekStart) &&
+                                                !normalizedDvDate.after(weekEnd);
+                                    })
                                     .forEach(dv -> {
                                         String dayName = new SimpleDateFormat("EEEE").format(dv.getDay());
                                         dailyValues.put(dayName, dv.getValue());
                                     });
+
+                            if (weekNum == 0) {
+                                fullIndicator.getDailyValues().stream()
+                                        .filter(dv -> {
+                                            Calendar dvTodayCal = Calendar.getInstance();
+                                            dvTodayCal.setTime(dv.getDay());
+                                            dvTodayCal.set(Calendar.HOUR_OF_DAY, 0);
+                                            dvTodayCal.set(Calendar.MINUTE, 0);
+                                            dvTodayCal.set(Calendar.SECOND, 0);
+                                            dvTodayCal.set(Calendar.MILLISECOND, 0);
+                                            Date normalizedDvDate = dvTodayCal.getTime();
+
+                                            return normalizedDvDate.equals(today);
+                                        })
+                                        .forEach(dv -> {
+                                            String dayName = new SimpleDateFormat("EEEE").format(dv.getDay());
+                                            dailyValues.put(dayName, dv.getValue());
+                                        });
+                            }
 
                             weeklyData.add(WeeklyDataDTO.builder()
                                     .weekLabel(weekLabel)
@@ -445,6 +518,196 @@ public class IndicatorService {
         return monthFormat.format(start) + " " + dayFormat.format(start) + "-" +
                 monthFormat.format(end) + " " + dayFormat.format(end) + yearFormat.format(end);
     }
+
+
+    public ResponseEntity<IndicatorValueResponseDTO> adminUpdateIndicatorValue(AdminUpdateIndicatorValueDTO updateRequest, int userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Only admins can perform this action")
+                            .build()
+            );
+        }
+
+        Department department = departmentRepository.findByName(updateRequest.getDepartmentName())
+                .orElse(null);
+
+        if (department == null) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Department not found")
+                            .build()
+            );
+        }
+
+        Indicator indicator = indicatorRepository.findByNameAndDepartment(
+                updateRequest.getIndicatorName(),
+                department
+        ).orElse(null);
+
+        if (indicator == null) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Indicator not found in specified department")
+                            .build()
+            );
+        }
+
+        LocalDate targetDate;
+        try {
+            targetDate = LocalDate.parse(updateRequest.getDate(), DateTimeFormatter.ISO_DATE);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Invalid date format. Please use YYYY-MM-DD")
+                            .build()
+            );
+        }
+
+        Date targetDateAsDate = Date.from(targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        Optional<DailyValue> dailyValueOpt = indicator.getDailyValues().stream()
+                .filter(dv -> DateUtil.isSameDay(dv.getDay(), targetDateAsDate))
+                .findFirst();
+
+        if (dailyValueOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("No value found for the specified date")
+                            .build()
+            );
+        }
+
+        DailyValue dailyValue = dailyValueOpt.get();
+        dailyValue.setValue(updateRequest.getNewValue());
+        indicatorRepository.save(indicator);
+
+        return ResponseEntity.ok(
+                IndicatorValueResponseDTO.builder()
+                        .success(true)
+                        .message("Value updated successfully")
+                        .day(java.sql.Date.valueOf(targetDate))
+                        .value(updateRequest.getNewValue())
+                        .build()
+        );
+    }
+
+
+
+
+    public ResponseEntity<IndicatorValueResponseDTO> userUpdateIndicatorValue(UserUpdateIndicatorValueDTO updateRequest, int userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!"TEAM_MEMBER".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Only team members can perform this action")
+                            .build()
+            );
+        }
+
+        String userDepartmentName = user.getDepartment();
+        if (userDepartmentName == null || userDepartmentName.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("User is not assigned to any department")
+                            .build()
+            );
+        }
+
+        Department department = departmentRepository.findByName(userDepartmentName)
+                .orElse(null);
+
+        if (department == null) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Department not found")
+                            .build()
+            );
+        }
+
+        Indicator indicator = indicatorRepository.findByNameAndDepartment(
+                updateRequest.getIndicatorName(),
+                department
+        ).orElse(null);
+
+        if (indicator == null) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Indicator not found in your department")
+                            .build()
+            );
+        }
+
+        LocalDate targetDate;
+        try {
+            targetDate = LocalDate.parse(updateRequest.getDate(), DateTimeFormatter.ISO_DATE);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("Invalid date format. Please use YYYY-MM-DD")
+                            .build()
+            );
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate lastNight = today.minusDays(1);
+        if (!targetDate.equals(today) && !targetDate.equals(lastNight)) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("You can only update today's or last night's values")
+                            .build()
+            );
+        }
+
+        Date targetDateAsDate = Date.from(targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        Optional<DailyValue> dailyValueOpt = indicator.getDailyValues().stream()
+                .filter(dv -> DateUtil.isSameDay(dv.getDay(), targetDateAsDate))
+                .findFirst();
+
+        if (dailyValueOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    IndicatorValueResponseDTO.builder()
+                            .success(false)
+                            .message("No value found for the specified date")
+                            .build()
+            );
+        }
+
+        DailyValue dailyValue = dailyValueOpt.get();
+        dailyValue.setValue(updateRequest.getNewValue());
+        indicatorRepository.save(indicator);
+
+        return ResponseEntity.ok(
+                IndicatorValueResponseDTO.builder()
+                        .success(true)
+                        .message("Value updated successfully")
+                        .day(java.sql.Date.valueOf(targetDate))
+                        .value(updateRequest.getNewValue())
+                        .build()
+        );
+    }
+
+
+
+
+
 
 
 

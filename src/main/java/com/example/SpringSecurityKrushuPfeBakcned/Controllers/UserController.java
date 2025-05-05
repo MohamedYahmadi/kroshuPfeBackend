@@ -69,6 +69,14 @@ public ResponseEntity<LoginResponseDto> loginAdmin(@RequestBody LoginDto loginDa
         return indicatorService.setTeamMemberIndicatorValue(requestDTO, userId);
     }
 
+    @PutMapping("/update-indicator-value/{userId}")
+    public ResponseEntity<IndicatorValueResponseDTO> updateIndicatorValue(
+            @RequestBody UserUpdateIndicatorValueDTO updateRequest,
+            @PathVariable int userId) {
+        return indicatorService.userUpdateIndicatorValue(updateRequest, userId);
+    }
+
+
 
 
 

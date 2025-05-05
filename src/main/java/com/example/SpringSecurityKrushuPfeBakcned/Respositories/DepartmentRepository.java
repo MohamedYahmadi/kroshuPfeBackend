@@ -4,6 +4,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Entities.Department;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Indicator;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,6 +15,10 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
     Optional<Department> findByName(String name);
     @Query("SELECT DISTINCT d FROM Department d LEFT JOIN FETCH d.indicators")
     List<Department> findAllWithIndicators();
+
+    @Query("SELECT d FROM Department d LEFT JOIN FETCH d.indicators WHERE d.id = :departmentId")
+    Optional<Department> findByIdWithIndicators(@Param("departmentId") Long departmentId);
+
 
 
     boolean existsByName(String newName);
