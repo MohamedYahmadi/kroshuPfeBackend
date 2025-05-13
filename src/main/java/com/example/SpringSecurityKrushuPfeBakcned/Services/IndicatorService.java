@@ -184,8 +184,8 @@ public class IndicatorService {
 
 
 
-    public List<DepartmentIndicatorsDTO> categorizeIndicatorsByDepartment() {
-        List<Department> allDepartments = departmentRepository.findAllWithIndicators();
+    public List<DepartmentIndicatorsWithActionsDTO> categorizeIndicatorsByDepartment() {
+        List<Department> allDepartments = departmentRepository.findAllWithRelations();
 
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
@@ -220,7 +220,6 @@ public class IndicatorService {
 
                                 List<DailyValueDto> dailyValues = fullIndicator.getDailyValues().stream()
                                         .filter(dv -> {
-                                            // Reset time components for comparison
                                             Calendar dvCal = Calendar.getInstance();
                                             dvCal.setTime(dv.getDay());
                                             dvCal.set(Calendar.HOUR_OF_DAY, 0);
@@ -241,15 +240,39 @@ public class IndicatorService {
                                         indicator.getId(),
                                         indicator.getName(),
                                         indicator.getTargetPerWeek(),
-                                        dailyValues
+                                        dailyValues,
+                                        department.getName()
                                 );
                             })
                             .collect(Collectors.toList());
 
-                    return new DepartmentIndicatorsDTO(
+
+                    List<ActionItemDto> actionItems = department.getActionItems().stream()
+                            .map(ai -> new ActionItemDto(
+                                    ai.getId(),
+                                    ai.getAction(),
+                                    department.getName(),
+                                    ai.getCreatedAt()
+                            ))
+                            .sorted(Comparator.comparing(ActionItemDto::getCreatedAt).reversed())
+                            .collect(Collectors.toList());
+
+
+                    List<WasteReasonDto> wasteReasons = department.getWasteReasons().stream()
+                            .map(wr -> new WasteReasonDto(
+                                    wr.getId(),
+                                    wr.getReason(),
+                                    department.getName(),
+                                    wr.getCreatedAt()
+                            ))
+                            .collect(Collectors.toList());
+
+                    return new DepartmentIndicatorsWithActionsDTO(
                             department.getId(),
                             department.getName(),
-                            indicatorDtos
+                            indicatorDtos,
+                            actionItems,
+                            wasteReasons
                     );
                 })
                 .collect(Collectors.toList());

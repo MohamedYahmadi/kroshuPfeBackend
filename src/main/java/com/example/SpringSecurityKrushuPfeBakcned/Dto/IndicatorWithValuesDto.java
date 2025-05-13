@@ -15,4 +15,6 @@ public class IndicatorWithValuesDto {
     private String name;
     private String targetPerWeek;
     private List<DailyValueDto> dailyValues;
+    private String departmentName;  // Added field
+
 }

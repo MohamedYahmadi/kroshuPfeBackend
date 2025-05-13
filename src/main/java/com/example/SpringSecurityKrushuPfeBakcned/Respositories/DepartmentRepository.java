@@ -2,6 +2,7 @@ package com.example.SpringSecurityKrushuPfeBakcned.Respositories;
 
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Department;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Indicator;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +19,10 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
 
     @Query("SELECT d FROM Department d LEFT JOIN FETCH d.indicators WHERE d.id = :departmentId")
     Optional<Department> findByIdWithIndicators(@Param("departmentId") Long departmentId);
+
+    @EntityGraph(attributePaths = {"indicators", "actionItems", "wasteReasons"})
+    @Query("SELECT d FROM Department d")
+    List<Department> findAllWithRelations();
 
 
 

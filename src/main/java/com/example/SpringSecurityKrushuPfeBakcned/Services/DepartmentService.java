@@ -38,7 +38,7 @@ public class DepartmentService {
                 .map(Department::getName)
                 .collect(Collectors.toList());
     }
-
+    // rak hat JsonIgnore mich 5ademtha dont forget
     public List<Department> getAllDepartments() {
         return departmentRepository.findAll();
     }

@@ -4,10 +4,7 @@ import com.example.SpringSecurityKrushuPfeBakcned.Dto.*;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Department;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.Indicator;
 import com.example.SpringSecurityKrushuPfeBakcned.Entities.User;
-import com.example.SpringSecurityKrushuPfeBakcned.Services.AdminService;
-import com.example.SpringSecurityKrushuPfeBakcned.Services.DepartmentService;
-import com.example.SpringSecurityKrushuPfeBakcned.Services.IndicatorService;
-import com.example.SpringSecurityKrushuPfeBakcned.Services.PrintService;
+import com.example.SpringSecurityKrushuPfeBakcned.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,12 +20,14 @@ public class AdminController {
     private final DepartmentService departmentService;
     private final IndicatorService indicatorService;
     private final PrintService printService;
+    private final ActionTrackingService actionTrackingService;
     @Autowired
-    public AdminController(AdminService adminService, DepartmentService departmentService, IndicatorService indicatorService, PrintService printService) {
+    public AdminController(AdminService adminService, DepartmentService departmentService, IndicatorService indicatorService, PrintService printService, ActionTrackingService actionTrackingService) {
         this.adminService = adminService;
         this.departmentService = departmentService;
         this.indicatorService = indicatorService;
         this.printService = printService;
+        this.actionTrackingService = actionTrackingService;
     }
 
 
@@ -91,7 +90,7 @@ public class AdminController {
         return indicatorService.updateIndicator(updateIndicatorData);
     }
     @GetMapping("/indicators-by-department")
-    public List<DepartmentIndicatorsDTO> getIndicatorsByDepartment() {
+    public List<DepartmentIndicatorsWithActionsDTO> getIndicatorsByDepartment() {
         return indicatorService.categorizeIndicatorsByDepartment();
     }
     @GetMapping("/all-departments-names")
@@ -136,6 +135,24 @@ public class AdminController {
             @RequestBody AdminUpdateIndicatorValueDTO updateRequest,
             @PathVariable int userId) {
         return indicatorService.adminUpdateIndicatorValue(updateRequest, userId);
+    }
+
+
+    // Admin endpoints
+    @PostMapping("/create-waste-reasons/{userId}")
+    public ResponseEntity<String> adminCreateWasteReasons(
+            @PathVariable int userId,
+            @RequestBody wasteReasonRequest request) {
+        String response = actionTrackingService.adminCreateWasteReasons(userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/create-action-items/{userId}")
+    public ResponseEntity<String> adminCreateActionItem(
+            @PathVariable int userId,
+            @RequestBody ActionItemDto actionItemData) {
+        String response = actionTrackingService.adminCreateActionItem(userId, actionItemData);
+        return ResponseEntity.ok(response);
     }
 
 
