@@ -26,9 +26,11 @@ public class Department {
     @JsonIgnore
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     private Set<Indicator> indicators = new HashSet<>();
+
     @JsonIgnore
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     private Set<WasteReason> wasteReasons = new HashSet<>();
+
     @JsonIgnore
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     private Set<ActionItem> actionItems = new HashSet<>();

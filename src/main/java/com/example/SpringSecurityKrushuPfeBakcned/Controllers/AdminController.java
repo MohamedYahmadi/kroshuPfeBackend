@@ -154,6 +154,59 @@ public class AdminController {
         String response = actionTrackingService.adminCreateActionItem(userId, actionItemData);
         return ResponseEntity.ok(response);
     }
+    @PutMapping("/waste-reasons/{wasteReasonId}")
+    public ResponseEntity<String> updateWasteReason(
+            @PathVariable int wasteReasonId,
+            @RequestBody WasteReasonUpdateRequest request) {
+        String result = actionTrackingService.updateWasteReason(
+                request.getUserId(),
+                wasteReasonId,
+                request.getNewReason()
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/waste-reasons/{wasteReasonId}")
+    public ResponseEntity<String> deleteWasteReason(
+            @PathVariable int wasteReasonId,
+            @RequestBody UserIdRequest request) {
+        String result = actionTrackingService.deleteWasteReason(
+                request.getUserId(),
+                wasteReasonId
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    // Action Item Endpoints
+    @PutMapping("/action-items/{actionItemId}")
+    public ResponseEntity<String> updateActionItem(
+            @PathVariable int actionItemId,
+            @RequestBody ActionItemUpdateRequest request) {
+        String result = actionTrackingService.updateActionItem(
+                request.getUserId(),
+                actionItemId,
+                request.getNewAction()
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/action-items/{actionItemId}")
+    public ResponseEntity<String> deleteActionItem(
+            @PathVariable int actionItemId,
+            @RequestBody UserIdRequest request) {
+        String result = actionTrackingService.deleteActionItem(
+                request.getUserId(),
+                actionItemId
+        );
+        return ResponseEntity.ok(result);
+    }
+
+
+
+
+
+
+
 
 
 

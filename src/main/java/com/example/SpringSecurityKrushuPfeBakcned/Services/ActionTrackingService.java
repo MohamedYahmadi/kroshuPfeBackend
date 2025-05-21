@@ -117,4 +117,46 @@ public class ActionTrackingService {
                 .createdAt(LocalDateTime.now())
                 .build();
     }
+
+    public String updateWasteReason(int userId, int wasteReasonId, String newReason) {
+        User user = validateUserAndRole(userId, "ADMIN");
+        WasteReason wasteReason = wasteReasonRepository.findById(wasteReasonId)
+                .orElseThrow(() -> new IllegalStateException("Waste reason not found"));
+
+        wasteReason.setReason(newReason.trim());
+        wasteReasonRepository.save(wasteReason);
+
+        return "Waste reason updated successfully";
+    }
+
+    public String deleteWasteReason(int userId, int wasteReasonId) {
+        User user = validateUserAndRole(userId, "ADMIN");
+        WasteReason wasteReason = wasteReasonRepository.findById(wasteReasonId)
+                .orElseThrow(() -> new IllegalStateException("Waste reason not found"));
+
+        wasteReasonRepository.delete(wasteReason);
+
+        return "Waste reason deleted successfully";
+    }
+
+    public String updateActionItem(int userId, int actionItemId, String newAction) {
+        User user = validateUserAndRole(userId, "ADMIN");
+        ActionItem actionItem = actionItemRepository.findById(actionItemId)
+                .orElseThrow(() -> new IllegalStateException("Action item not found"));
+
+        actionItem.setAction(newAction.trim());
+        actionItemRepository.save(actionItem);
+
+        return "Action item updated successfully";
+    }
+
+    public String deleteActionItem(int userId, int actionItemId) {
+        User user = validateUserAndRole(userId, "ADMIN");
+        ActionItem actionItem = actionItemRepository.findById(actionItemId)
+                .orElseThrow(() -> new IllegalStateException("Action item not found"));
+
+        actionItemRepository.delete(actionItem);
+
+        return "Action item deleted successfully";
+    }
 }
